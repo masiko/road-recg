@@ -43,8 +43,8 @@ int roadRecg::rowRateOfChange(int thre) {
 				 end += abs(gray.data[d+f + c*width] - gray.data[d+f+1 + c*width]);
 			}
 
-			diff = first + end;
-			if (diff<thre) 	gray.data[d + c*width] = 255;
+			diff = abs(first - end);
+			if (diff>thre) 	gray.data[d + c*width] = 255;
 
 			first = end;
 			end = 0;

@@ -4,6 +4,7 @@ roadRecg::roadRecg(int row, int col) {
 	width = col;
 	height = row;
 	gray = cv::Mat::zeros(row,col,CV_8UC1);
+	result = cv::Mat::zeros(row,col,CV_8UC3);
 }
 
 int roadRecg::mainloop(cv::Mat in, cv::Mat out) {
@@ -11,18 +12,19 @@ int roadRecg::mainloop(cv::Mat in, cv::Mat out) {
 //	int row, col;
 	cv::cvtColor(in,gray,CV_RGB2GRAY);
 
-	rowRateOfChange(100);
+	detectRateOfChange(100);
 
 	for (int r=0; r<height; r++) {
 		for (int c=0; c<width; c++) {
 			out.data[c + width*r] = gray.data[c + width*r];
 		}
 	}
+	cv::imshow("result", result);
 
 	return 0;
 }
 
-int roadRecg::rowRateOfChange(int thre) {
+int roadRecg::detectRateOfChange(int thre) {
 	const int MASK = 10;
 	const int MASK_HALF = 5;
 	int first=0, end=0;
@@ -44,7 +46,8 @@ int roadRecg::rowRateOfChange(int thre) {
 			}
 
 			diff = abs(first - end);
-			if (diff>thre) 	gray.data[d + c*width] = 255;
+			if (diff>thre) 	result.data[3*d + 3*c*width] = 255;
+			else			result.data[3*d + 3*c*width] = 0;
 
 			first = end;
 			end = 0;

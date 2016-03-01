@@ -7,12 +7,13 @@ class roadRecg {
 		int width;
 		int height;
 		cv::Mat gray;
+		cv::Mat result;
 		char color_tbl[765];	//color = b + 255*g + 2*255*r
 	public:
 
 	roadRecg(int r, int c);
 	int setTbl(char map[765]);
 	int mainloop(cv::Mat in, cv::Mat out);
-	int rowRateOfChange(int thre);
+	int detectRateOfChange(int thre);
 };
 

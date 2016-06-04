@@ -3,25 +3,30 @@
 roadRecg::roadRecg(int row, int col) {
 	width = col;
 	height = row;
+	map = cv::Mat::zeros(row,col,CV_8UC3);
 	gray = cv::Mat::zeros(row,col,CV_8UC1);
 	edge = cv::Mat::zeros(row,col,CV_8UC1);
 	result = cv::Mat::zeros(row,col,CV_8UC3);
 }
 
-int roadRecg::setTbl(int w, int h) {
+int roadRecg::setHist(int w, int h) {
 	int result_bin=0;
 	int result_count=0;
+	int b,g,r;
 
-	for (int i=0; i<16; i++)	histogram[i] = 0;
+	for (int i=0; i<512; i++)	histogram[i] = 0;
 
-	if (w>=width || h>=height)	return -1;
+	if (w<0 || h<0 || w>=width || h>=height)	return -1;
 
 	for (int i=height-h; i<height; i++) {
 		for (int j=width/2-w/2; j<width/2+w/2; j++) {
-			histogram[int(gray.data[j+i*width]/16)] += 1;
+			b = map.data[3*(j+i*width)];
+			g = map.data[3*(j+i*width)+1];
+			r = map.data[3*(j+i*width)+2];
+			histogram[b + 8*g + 64*r] += 1;
 		}
 	}
-	for (int i=0; i<16; i++) {
+	for (int i=0; i<512; i++) {
 		if (histogram[i] >= result_count) {
 			result_bin = i;
 			result_count = histogram[i];
@@ -30,9 +35,21 @@ int roadRecg::setTbl(int w, int h) {
 	return result_bin;
 }
 
+int roadRecg::setColMap() {
+	for (int i=0; i<height; i++) {
+		for (int j=0; j<width; j++) {
+			map.data[3*(j+i*width)] = int(input.data[3*(j+i*width)]/32);
+			map.data[3*(j+i*width)+1] = int(input.data[3*(j+i*width)+1]/32);
+			map.data[3*(j+i*width)+2] = int(input.data[3*(j+i*width)+2]/32);
+		}
+	}
+	return 0;
+}
 
 int roadRecg::mainloop(cv::Mat in, cv::Mat out) {
 	int edge_size = 0;
+	in.copyTo(input);
+	setColMap();
 	cv::cvtColor(in,gray,CV_RGB2GRAY);
 	result = cv::Mat::zeros(height,width,CV_8UC3);
 
@@ -89,13 +106,13 @@ int roadRecg::detectRateOfChange(int thre) {
 					edge_flag = 0;
 				} else {
 					edge.data[d + c*width] = 0; 
-					result.data[3*d + 3*c*width+2] = 0;
+				//	result.data[3*d + 3*c*width+2] = 0;
 					edge_flag = 1;
 				}
 			} else {
 				edge_flag = 0;
 				edge.data[d + c*width] = 0; 
-				result.data[3*d + 3*c*width+2] = 0;
+			//	result.data[3*d + 3*c*width+2] = 0;
 			}
 
 			first = end;
@@ -109,25 +126,18 @@ int roadRecg::detectRateOfChange(int thre) {
 }
 
 int roadRecg::detectRoadEdge(int num) {
-	const int MASK = 5;
 	int interval = height/(2*num);
 	int x=width/2;
 	int y;
-	int col_hist = setTbl(20, 40);
-	
-	std::cout<<col_hist<<"\n";
+	int col_hist = setHist(20, 40);
 
-	for (int i=0; i<num; i++) {
-		y = width*(i*interval+height/2);
-		for (int j=MASK; j<width/2; j+=MASK) {
-			 std::cout<<(gray.data[x+j + y]/16)<<",";
-			 if ((gray.data[x+j + y]/16)==col_hist){
-				 result.data[3*(x+j-MASK + y)] = 255;
-				 result.data[3*(x+j-MASK + y)+1] = 255;
-				 result.data[3*(x+j-MASK + y)+2] = 255;
-			 }
+	for (int i=0; i<height; i++) {
+		for (int j=0; j<width; j++) {
+			result.data[3*(j + i*width)] = map.data[3*(j + i*width)]*32;
+			result.data[3*(j + i*width)+1] = map.data[3*(j + i*width)+1]*32;
+			result.data[3*(j + i*width)+2] = map.data[3*(j + i*width)+2]*32;
 		}
-		std::cout<<"\n";
 	}
+	
 	return 0;
 }

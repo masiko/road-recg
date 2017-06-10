@@ -1,52 +1,39 @@
 #include <iostream>
-#include <opencv2/opencv.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include "road-recg.hpp"
+#include "projective_tf.hpp"
+#include "DetectObject.hpp"
 
-//#define VIDEO_MODE
-// tmp of image processing program
+#define CAP_MODE 1
 
 int main() {
-	cv::Mat in, out;
-
-	#ifdef VIDEO_MODE
-	//Video Test Mode
+	projective_tf pt;
+	int x, y, t;
+	int x0, y0, t0;
+#ifdef CAP_MODE
 	cv::VideoCapture cap(1);
+#else
+	cv::VideoCapture cap("video2.mp4");
+#endif	
 	cv::namedWindow("cap");
-	cv::namedWindow("out");
+	cv::namedWindow("dst");
+
 	if (!cap.isOpened())	return -1;
 	std::cout << "start cap channel 1\n";
-	cap >> in;
-
-	#else
-	//Image Test Mode
-	in = cv::imread("test_img.jpg");
-	if (in.empty())	return -1;
 	
-	#endif
-
-	out.create(in.rows, in.cols, CV_8UC1);
-	roadRecg RoadRecg(in.rows, in.cols);
+	pt.setMatPra(cap.get(CV_CAP_PROP_FRAME_WIDTH), cap.get(CV_CAP_PROP_FRAME_HEIGHT));
 	
-	#ifdef VIDEO_MODE
-	//Video Test Mode	
+	pt.setFOV(2.0);
+	pt.setRM(9*M_PI/20);
+
 	while(1) {
-		cap >> in;
+		cap >> pt.in;
+
 		//write main loop
-		RoadRecg.mainloop(in, out);
-		cv::imshow("cap",in);
-		cv::imshow("out",out);
+		pt.culTf();
+
+		cv::imshow("cap",pt.in);
+		cv::imshow("dst",pt.out);
 		if (cv::waitKey(100)!=-1)	break;
 	}
-	
-	#else
-	//Image Test Mode
-	RoadRecg.mainloop(in, out);
-	cv::imshow("cap",in);
-	cv::imshow("out",out);
-	while(1)	if (cv::waitKey(100)!=-1)	break;
-
-	#endif
 
 	return 0;
 }

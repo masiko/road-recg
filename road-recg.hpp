@@ -17,7 +17,7 @@ class roadRecg {
 	public:
 
 	roadRecg(int r, int c);
-	int setHist(int w, int h);
+	int setHist(int w, int h, int top3[3]);
 	int setColMap();
 	int mainloop(cv::Mat in, cv::Mat out);
 	int detectRateOfChange(int thre);

@@ -9,8 +9,18 @@ roadRecg::roadRecg(int row, int col) {
 	result = cv::Mat::zeros(row,col,CV_8UC3);
 }
 
-int roadRecg::setHist(int w, int h) {
-	int result_bin=0;
+int roadRecg::setColMap() {
+	for (int i=0; i<height; i++) {
+		for (int j=0; j<width; j++) {
+			map.data[3*(j+i*width)] = int(input.data[3*(j+i*width)]/32);
+			map.data[3*(j+i*width)+1] = int(input.data[3*(j+i*width)+1]/32);
+			map.data[3*(j+i*width)+2] = int(input.data[3*(j+i*width)+2]/32);
+		}
+	}
+	return 0;
+}
+
+int roadRecg::setHist(int w, int h, int top3[3]) {
 	int result_count=0;
 	int b,g,r;
 
@@ -28,22 +38,13 @@ int roadRecg::setHist(int w, int h) {
 	}
 	for (int i=0; i<512; i++) {
 		if (histogram[i] >= result_count) {
-			result_bin = i;
+			top3[2] = top3[1];
+			top3[1] = top3[0];
+			top3[0] = i;
 			result_count = histogram[i];
 		}
 	}
-	return result_bin;
-}
-
-int roadRecg::setColMap() {
-	for (int i=0; i<height; i++) {
-		for (int j=0; j<width; j++) {
-			map.data[3*(j+i*width)] = int(input.data[3*(j+i*width)]/32);
-			map.data[3*(j+i*width)+1] = int(input.data[3*(j+i*width)+1]/32);
-			map.data[3*(j+i*width)+2] = int(input.data[3*(j+i*width)+2]/32);
-		}
-	}
-	return 0;
+	return result_count;
 }
 
 int roadRecg::mainloop(cv::Mat in, cv::Mat out) {
@@ -54,7 +55,7 @@ int roadRecg::mainloop(cv::Mat in, cv::Mat out) {
 	result = cv::Mat::zeros(height,width,CV_8UC3);
 
 	detectRoadEdge(10);
-	edge_size = detectRateOfChange(100);
+//	edge_size = detectRateOfChange(100);
 
 	for (int r=0; r<height; r++) {
 		for (int c=0; c<width; c++) {
@@ -73,69 +74,20 @@ int roadRecg::mainloop(cv::Mat in, cv::Mat out) {
 	return 0;
 }
 
-int roadRecg::detectRateOfChange(int thre) {
-	const int MASK = 10;
-	const int MASK_HALF = 5;
-	int first=0, end=0;
-	int diff = 0;
-	int edge_size = 0;
-	char edge_flag = 1;
-/*
-	for (int e=0; e<MASK_HALF-1; e++) {
-		first += abs(gray.data[e]-gray.data[e+1]);
-	}
-*/
-	for (int c=0; c<height; c++) {
-		edge_flag = 1;
-		for (int e=0; e<MASK_HALF-1; e++) {
-			first += abs(gray.data[e + c*width] - gray.data[e+1 + c*width]);
-		}
-
-		for (int d=MASK_HALF; d<width-MASK_HALF; d+=MASK_HALF) {
-			
-			for (int f=0; f<MASK_HALF-1; f++) {
-				 end += abs(gray.data[d+f + c*width] - gray.data[d+f+1 + c*width]);
-			}
-
-			diff = abs(first - end);
-			if (diff>thre) {
-				if (edge_flag) {
-					edge.data[d + c*width] = 255; 
-					result.data[3*d + 3*c*width+2] = 255;
-					edge_size++;
-					edge_flag = 0;
-				} else {
-					edge.data[d + c*width] = 0; 
-				//	result.data[3*d + 3*c*width+2] = 0;
-					edge_flag = 1;
-				}
-			} else {
-				edge_flag = 0;
-				edge.data[d + c*width] = 0; 
-			//	result.data[3*d + 3*c*width+2] = 0;
-			}
-
-			first = end;
-			end = 0;
-		}
-		first = 0;
-		end = 0;
-	}
-//	if (edge_size>20)	cv::HoughLinesP( edge, lines, 3, CV_PI/45, 5, 10, 10);
-	return edge_size;
-}
-
 int roadRecg::detectRoadEdge(int num) {
-	int interval = height/(2*num);
-	int x=width/2;
+	int top3[3] = {-1,-1,-1};
 	int y;
-	int col_hist = setHist(20, 40);
+	setHist(40, 120, top3);
+
+	std::cout<<top3[0]<<","<<top3[1]<<","<<top3[2]<<"\n";
+
 
 	for (int i=0; i<height; i++) {
+		y = i*width;
 		for (int j=0; j<width; j++) {
-			result.data[3*(j + i*width)] = map.data[3*(j + i*width)]*32;
-			result.data[3*(j + i*width)+1] = map.data[3*(j + i*width)+1]*32;
-			result.data[3*(j + i*width)+2] = map.data[3*(j + i*width)+2]*32;
+			result.data[3*(j + y)] = map.data[3*(j + y)]*32;
+			result.data[3*(j + y)+1] = map.data[3*(j + y)+1]*32;
+			result.data[3*(j + y)+2] = map.data[3*(j + y)+2]*32;
 		}
 	}
 	
